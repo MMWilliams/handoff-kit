@@ -1,0 +1,8 @@
+{
+  "name": "handoff-kit",
+  "private": true,
+  "description": "Start every coding-agent session clean: state on disk, one word to resume.",
+  "scripts": {
+    "test": "node tests/test-handoff-link.js && node tests/test-todo-activity.js && node tests/test-install.js"
+  }
+}
