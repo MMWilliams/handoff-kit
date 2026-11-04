@@ -31,7 +31,7 @@ const TARGETS = {
   },
 };
 
-function rulesFor(name, target) {
+function rulesFor(target) {
   const text = fs.readFileSync(path.join(KIT, 'instructions', 'rules.md'), 'utf8').replace(/\r\n/g, '\n').trimEnd();
   const values = { ...target, RULES_FILE: path.basename(target.rules) };
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]);
@@ -41,7 +41,7 @@ function rulesFor(name, target) {
 function installRules(name, target) {
   fs.mkdirSync(path.dirname(target.rules), { recursive: true });
   const had = fs.existsSync(target.rules) ? fs.readFileSync(target.rules, 'utf8') : '';
-  const block = `${START}\n${rulesFor(name, target)}\n${END}`;
+  const block = `${START}\n${rulesFor(target)}\n${END}`;
   const a = had.indexOf(START);
   const b = had.indexOf(END);
   if (a === -1 && /^## Handoff habit/m.test(had)) {
@@ -91,13 +91,15 @@ function installHooks() {
       .filter((group) => group.hooks.length > 0);
     if (hooks[event].length === 0) delete hooks[event];
   }
+  const added = new Map();
   for (const [event, matcher, h] of WIRING) {
-    const groups = hooks[event] || (hooks[event] = []);
-    const group = groups.find((g) => (g.matcher || null) === matcher && g.kit) || { ...(matcher ? { matcher } : {}), kit: true, hooks: [] };
-    if (!groups.includes(group)) groups.push(group);
-    group.hooks.push(h);
+    const key = `${event}|${matcher}`;
+    if (!added.has(key)) {
+      added.set(key, { ...(matcher ? { matcher } : {}), hooks: [] });
+      (hooks[event] ||= []).push(added.get(key));
+    }
+    added.get(key).hooks.push(h);
   }
-  for (const groups of Object.values(hooks)) for (const g of groups) delete g.kit;
   settings.hooks = hooks;
   const next = `${JSON.stringify(settings, null, 2)}\n`;
   if (next !== had) {
